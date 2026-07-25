@@ -615,24 +615,70 @@ function renderAdminListSwitcher() {
     dom.adminModeExams.className = 'secondary-button';
     dom.adminModeExams.style.background = 'transparent';
 
-    dom.submissionList.innerHTML = state.applications.length ? state.applications.map(app => {
-      const isApproved = app.status === 'approved';
-      const isRejected = app.status === 'rejected';
-      let statusStyle = 'color: #94a3b8; background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.2);';
-      let statusText = 'Ожидает';
-      if (isApproved) { statusStyle = 'color: #10b981; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3);'; statusText = 'Одобрено'; }
-      if (isRejected) { statusStyle = 'color: #ef4444; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3);'; statusText = 'Отклонено'; }
+    // --- СОРТИРОВКА И ГРУППИРОВКА ЗАЯВЛЕНИЙ ПО ПОДРАЗДЕЛЕНИЮ ---
+    if (!state.applications.length) {
+      dom.submissionList.innerHTML = '<div class="empty-state">Нет поданных заявлений.</div>';
+    } else {
+      const SQUAD_ORDER = ['LSFM', 'SFFM', 'LVFM', 'TVC'];
+      const SQUAD_LABELS = {
+        'LSFM': '🔵 LSFM — Лос-Сантос',
+        'SFFM': '🟢 SFFM — Сан-Фиерро',
+        'LVFM': '🟡 LVFM — Лас-Вентурас',
+        'TVC':  '🟣 TVC — Телецентр',
+      };
+      const SQUAD_HEADER_COLORS = {
+        'LSFM': '#3b82f6',
+        'SFFM': '#22c55e',
+        'LVFM': '#eab308',
+        'TVC':  '#a855f7',
+      };
 
-      return `
-        <button type="button" class="submission-item ${state.selectedAppId === app.id ? 'active' : ''}" data-appid="${app.id}">
-          <strong style="font-size: 1rem; color: #fff;">${app.applicant_name}</strong>
-          <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 0.8rem;">
-            <span style="padding: 2px 6px; border-radius: 4px; font-weight: bold; ${statusStyle}">${statusText}</span>
-            <span style="color: #64748b;">${formatDate(app.created_at)}</span>
-          </div>
-        </button>
-      `;
-    }).join('') : '<div class="empty-state">Нет поданных заявлений.</div>';
+      // Группируем по squad (case-insensitive)
+      const groups = {};
+      state.applications.forEach(app => {
+        const key = (app.squad || '').toUpperCase();
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(app);
+      });
+
+      // Порядок: сначала известные подразделения, потом остальные
+      const orderedKeys = [
+        ...SQUAD_ORDER.filter(k => groups[k]),
+        ...Object.keys(groups).filter(k => !SQUAD_ORDER.includes(k))
+      ];
+
+      const renderAppBtn = (app) => {
+        const isApproved = app.status === 'approved';
+        const isRejected = app.status === 'rejected';
+        let statusStyle = 'color: #94a3b8; background: rgba(148,163,184,0.1); border: 1px solid rgba(148,163,184,0.2);';
+        let statusText = 'Ожидает';
+        if (isApproved) { statusStyle = 'color: #10b981; background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3);'; statusText = 'Одобрено'; }
+        if (isRejected) { statusStyle = 'color: #ef4444; background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.3);'; statusText = 'Отклонено'; }
+        return `
+          <button type="button" class="submission-item ${state.selectedAppId === app.id ? 'active' : ''}" data-appid="${app.id}">
+            <strong style="font-size: 1rem; color: #fff;">${app.applicant_name}</strong>
+            <div style="margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 0.8rem;">
+              <span style="padding: 2px 6px; border-radius: 4px; font-weight: bold; ${statusStyle}">${statusText}</span>
+              <span style="color: #64748b;">${formatDate(app.created_at)}</span>
+            </div>
+          </button>`;
+      };
+
+      dom.submissionList.innerHTML = orderedKeys.map(key => {
+        const label = SQUAD_LABELS[key] || `❓ ${key || 'Без подразделения'}`;
+        const color = SQUAD_HEADER_COLORS[key] || '#64748b';
+        const apps = groups[key];
+        return `
+          <div style="margin-bottom: 4px;">
+            <div style="padding: 6px 10px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase;
+                        letter-spacing: 1px; color: ${color}; border-left: 3px solid ${color};
+                        background: rgba(0,0,0,0.2); margin-bottom: 4px;">
+              ${label} <span style="color: #475569; font-weight: 600;">(${apps.length})</span>
+            </div>
+            ${apps.map(renderAppBtn).join('')}
+          </div>`;
+      }).join('');
+    }
 
     dom.submissionList.querySelectorAll('[data-appid]').forEach((button) => {
       button.addEventListener('click', () => {
