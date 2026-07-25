@@ -1185,7 +1185,7 @@ async function init() {
   }
   if (btnAdminEnter) {
   btnAdminEnter.addEventListener('click', () => {
-    window.open('https://kulzzer23.github.io/lsfmblue/admin.html', '_blank');
+    window.open('https://kulzzer23.github.io/mmblue/admin.html', '_blank');
   });
 }
   if (btnTop) {
