@@ -6,11 +6,20 @@ import { renderPracticeResult, renderPracticeSection } from './sections/practice
 import { renderExamSection } from './sections/exam.js';
 import { createSubmissionStore, normalizeSubmissionRecord } from './lib/submissions.js';
 import { renderApplicationSection } from './sections/application.js';
-import { escapeHtml } from './lib/dom.js'; // <--- ДОБАВЬ ЭТУ СТРОКУ
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+import { escapeHtml } from './lib/dom.js';
 
+// Пытаемся загрузить Supabase, но не падаем если не получится
+let createClient = null;
+let supabaseImportError = false;
 
-// ВОТ ЭТА СТРОКА КРИТИЧЕСКИ ВАЖНА (Без неё будет ошибка createClient is not defined)
+try {
+  const module = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  createClient = module.createClient;
+} catch (err) {
+  console.error('Не удалось загрузить Supabase SDK:', err);
+  supabaseImportError = true;
+}
+
 export let supabaseClient = null;
 export let examQuestions = []; 
 const store = createSubmissionStore();
@@ -1108,27 +1117,34 @@ async function checkGlobalAnnouncement() {
 
 async function init() {
   let examLoadError = false;
-  try {
-    const url = config.supabaseUrl;
-    const key = config.supabaseAnonKey; 
-    
-    if (!url || !key) {
-      throw new Error("Ключи Supabase не найдены в конфиге!");
-    }
-    
-    supabaseClient = createClient(url, key);
-    const { data, error } = await supabaseClient.from('questions').select('*');
-    
-    if (error) throw error;
-    
-    examQuestions = data.sort((a, b) => {
-      const numA = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
-      const numB = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
-      return numA - numB;
-    });
-  } catch (err) {
-    console.error('Ошибка загрузки БД (Экзамен будет пуст):', err.message);
+  
+  // Если Supabase SDK не загрузился, сразу помечаем ошибку
+  if (supabaseImportError || !createClient) {
+    console.error('Supabase SDK недоступен');
     examLoadError = true;
+  } else {
+    try {
+      const url = config.supabaseUrl;
+      const key = config.supabaseAnonKey; 
+      
+      if (!url || !key) {
+        throw new Error("Ключи Supabase не найдены в конфиге!");
+      }
+      
+      supabaseClient = createClient(url, key);
+      const { data, error } = await supabaseClient.from('questions').select('*');
+      
+      if (error) throw error;
+      
+      examQuestions = data.sort((a, b) => {
+        const numA = parseInt(a.id.replace(/\D/g, ''), 10) || 0;
+        const numB = parseInt(b.id.replace(/\D/g, ''), 10) || 0;
+        return numA - numB;
+      });
+    } catch (err) {
+      console.error('Ошибка загрузки БД (Экзамен будет пуст):', err.message);
+      examLoadError = true;
+    }
   }
 
   state.practiceAnswers = createBlankAnswers(practiceQuestions);

@@ -1,10 +1,19 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
 import { config } from '../config.js';
 import { content } from '../content.js';
 
 export const LEARNING_CONTENT_KEY = 'learning';
 
-const supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+let supabase = null;
+let supabaseLoadError = false;
+
+// Пытаемся загрузить Supabase, но не ломаем всё если не получится
+try {
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
+  supabase = createClient(config.supabaseUrl, config.supabaseAnonKey);
+} catch (err) {
+  console.error('Не удалось загрузить Supabase SDK:', err);
+  supabaseLoadError = true;
+}
 
 function deepMerge(base, override) {
   if (Array.isArray(base) && Array.isArray(override)) {
@@ -24,6 +33,11 @@ function deepMerge(base, override) {
 }
 
 export async function getLearningContent() {
+  // Если Supabase SDK не загрузился, сразу возвращаем fallback с ошибкой
+  if (supabaseLoadError || !supabase) {
+    return { ...content.learning, loadError: true };
+  }
+
   try {
     const { data, error } = await supabase
       .from('site_content')
