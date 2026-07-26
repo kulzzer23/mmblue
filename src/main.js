@@ -1107,6 +1107,7 @@ async function checkGlobalAnnouncement() {
 
 
 async function init() {
+  let examLoadError = false;
   try {
     const url = config.supabaseUrl;
     const key = config.supabaseAnonKey; 
@@ -1127,6 +1128,7 @@ async function init() {
     });
   } catch (err) {
     console.error('Ошибка загрузки БД (Экзамен будет пуст):', err.message);
+    examLoadError = true;
   }
 
   state.practiceAnswers = createBlankAnswers(practiceQuestions);
@@ -1218,6 +1220,7 @@ async function init() {
       state.examMeta[field] = value;
     },
     onSubmit: submitExam,
+    loadError: examLoadError,
   });
 
   dom.tabButtons.forEach((button) => {

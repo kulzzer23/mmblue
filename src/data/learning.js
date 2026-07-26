@@ -32,11 +32,12 @@ export async function getLearningContent() {
       .maybeSingle();
 
     if (error) throw error;
-    if (!data?.payload || typeof data.payload !== 'object') return content.learning;
+    if (!data?.payload || typeof data.payload !== 'object') return { ...content.learning, loadError: false };
 
-    return deepMerge(content.learning, data.payload);
-  } catch {
-    return content.learning;
+    return { ...deepMerge(content.learning, data.payload), loadError: false };
+  } catch (err) {
+    console.error('Ошибка загрузки контента обучения:', err);
+    return { ...content.learning, loadError: true };
   }
 }
 

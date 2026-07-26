@@ -413,7 +413,20 @@ export function renderApplicationSection(containerElement, supabase) {
     debounceTimer = setTimeout(async () => {
       const { data, error } = await supabase.from('submissions').select('*').ilike('name', `%${name}%`).limit(4);
 
-      if (error || !data || data.length === 0) {
+      if (error) {
+        examListContainer.innerHTML = `
+          <div style="padding: 12px; background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; border-radius: 8px;">
+            <div style="display: flex; align-items: start; gap: 8px; margin-bottom: 8px;">
+              <span style="font-size: 1.2rem;">🔒</span>
+              <div>
+                <div style="color: #ffc107; font-weight: bold; margin-bottom: 4px;">Ошибка подключения к базе данных</div>
+                <div style="color: #94a3b8; font-size: 0.85rem; line-height: 1.4;">
+                  Возможно, Supabase заблокирован. Попробуйте использовать <strong style="color: #fff;">VPN</strong>.
+                </div>
+              </div>
+            </div>
+          </div>`;
+      } else if (!data || data.length === 0) {
         examListContainer.innerHTML = '<span style="color: #ef4444;">ЗАПИСИ ОТСУТСТВУЮТ</span>';
       } else {
         const sorted = data.sort((a, b) => new Date(b.submittedAt || b.created_at || 0) - new Date(a.submittedAt || a.created_at || 0));

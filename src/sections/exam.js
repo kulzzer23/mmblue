@@ -227,7 +227,7 @@ function disableAntiCheat() {
   }
 }
 
-export function renderExamSection({ formEl, questions, state, onAnswerChange, onMetaChange, onSubmit }) {
+export function renderExamSection({ formEl, questions, state, onAnswerChange, onMetaChange, onSubmit, loadError }) {
   
   // Внедряем стили SAMP Диалога автоматически при первом открытии
   if (!document.getElementById('samp-dialog-css')) {
@@ -278,6 +278,35 @@ export function renderExamSection({ formEl, questions, state, onAnswerChange, on
 
     `;
     document.head.appendChild(style);
+  }
+
+  // Показываем предупреждение о VPN если не загрузились вопросы
+  if (loadError || questions.length === 0) {
+    disableAntiCheat();
+    formEl.innerHTML = `
+      <div style="text-align: center; padding: 40px 20px; background: rgba(7, 13, 28, 0.5); border-radius: 16px; border: 1px solid rgba(127, 227, 255, 0.2);">
+        <div style="font-size: 3rem; margin-bottom: 1rem;">⚠️</div>
+        <h2 style="margin-bottom: 15px; color: #fff;">Не удалось загрузить вопросы экзамена</h2>
+        
+        <div style="background: rgba(255, 193, 7, 0.1); border: 2px solid #ffc107; border-radius: 12px; padding: 1.5rem; margin: 1.5rem auto; max-width: 600px; text-align: left;">
+          <div style="display: flex; align-items: start; gap: 1rem;">
+            <div style="font-size: 2rem; flex-shrink: 0;">🔒</div>
+            <div>
+              <h4 style="color: #ffc107; margin: 0 0 0.5rem 0; font-size: 1.1rem;">Возможно, Supabase заблокирован в вашей стране</h4>
+              <p style="margin: 0; line-height: 1.6; color: #cbd5e1;">
+                Если вопросы экзамена не загружаются, попробуйте использовать <strong style="color: #fff;">VPN</strong> для доступа к сайту. 
+                Рекомендуем подключиться к серверам в <strong>США</strong> или <strong>Европе</strong>.
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <button onclick="window.location.reload()" class="primary-button" style="margin-top: 1rem;">
+          🔄 Обновить страницу
+        </button>
+      </div>
+    `;
+    return;
   }
 
   if (!isExamStarted) {
